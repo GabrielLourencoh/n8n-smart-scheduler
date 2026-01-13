@@ -1,0 +1,386 @@
+{
+  "name": "AgenteAgendamentoConsultasPorVozTelegram",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0],
+      "id": "3d1690f7-0590-448f-8192-ba1ccdcbd1bd",
+      "name": "Telegram Trigger",
+      "webhookId": "c36f98eb-6d51-48ea-a564-59cde8d5c5bf",
+      "credentials": {
+        "telegramApi": {
+          "id": "FfmWPbS2nsCJTPKk",
+          "name": "AgenteAgendamentosConsultasPorVozBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "281d902b-56a7-45cd-9cd1-1e9f7c8a5536",
+              "leftValue": "={{ $json.message.voice }}",
+              "rightValue": "",
+              "operator": {
+                "type": "object",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [208, 0],
+      "id": "b3ad4950-066c-4170-ae36-61c7b07d3ff5",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "resource": "file",
+        "fileId": "={{ $json.message.voice.file_id }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [416, -192],
+      "id": "fddc844d-2f46-4c90-acd7-72ecc4b46ba2",
+      "name": "Get a file",
+      "webhookId": "1e8020c3-b4b7-40bf-9b37-6a5fb00be36e",
+      "credentials": {
+        "telegramApi": {
+          "id": "FfmWPbS2nsCJTPKk",
+          "name": "AgenteAgendamentosConsultasPorVozBot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.5-flash"
+        },
+        "inputType": "binary",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [608, -192],
+      "id": "ab6aafe1-83b4-4970-9c63-4f62198dc8d9",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EHhJ7HI0qTkAK1Gs",
+          "name": "GeminiAutomacaoRespostaEmails"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const message = $(\"Telegram Trigger\").first().json.message;\n\nif (message.text) {\n  return [{\n    json: {\n      text: message.text,\n    }\n  }];\n} else {\n  const transcriptionNode = $(\"Transcribe a recording\").first();\n  \n  const transcribedText = transcriptionNode.json.content && \n                          transcriptionNode.json.content.parts && \n                          transcriptionNode.json.content.parts[0] ? \n                          transcriptionNode.json.content.parts[0].text : \n                          \"Erro na transcrição\";\n\n  return [{\n    json: {\n      text: transcribedText,\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1024, 16],
+      "id": "a3a31810-5b7a-4761-a50d-97b02fc5c2f7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "=Você é um assistente de calendário. A hora atual é: {{ new Date().toLocaleString(\"pt-BR\", { timeZone: \"America/Sao_Paulo\" }) }}\n\nREGRAS DE FORMATAÇÃO (CRÍTICO):\n1. Responda APENAS com texto puro.\n2. NUNCA use asteriscos (*) em hipótese alguma. O Telegram trava com esse caractere.\n3. Se precisar fazer uma lista, use HIFENS (-) ou números.\n   - Exemplo Correto:\n     - Reunião A\n     - Reunião B\n   - Exemplo ERRADO:\n     * Reunião A\n\nQuando necessário, utilize as ferramentas:\n  Buscar_Eventos\n  Criar_Eventos\n  Deletar_Eventos\n\nAo buscar reuniões:\n  - Sempre preencha os parâmetros \"time_min\" e \"time_max\"\n  - Use o formato ISO: \"AAAA-MM-DDTHH:mm:ss-03:00\"\n  - Se o usuário não fornecer um intervalo de tempo:\n    - Use a hora atual como \"time_min\"\n    - Use o final do dia atual como \"time_max\"\n    - Isso garante que os eventos de hoje sejam exibidos por padrão\n  - Incluir participantes\n  - Exemplo para o dia de hoje (Horário de Brasília):\n    - \"time_min\": \"2025-04-24T00:00:00-03:00\"\n    - \"time_max\": \"2025-04-24T23:59:59-03:00\"\n\nAo criar eventos:\n    - Para o parâmetro \"event_name\", forneça um título claro e descritivo\n    - Para o parâmetro \"start_time\", use o formato ISO:  \n“AAAA-MM-DDTHH:mm:ss-03:00\"\n    - Para o parâmetro \"end_time\", use o mesmo formato\n    - Definir duração padrão de 30 minutos, se não for especificada\n    - Sempre inclua informações de fuso horário \n    - Exemplo: \"2025-03-26T15:00:00-03:00\" (Horário de Brasília)\n  \nAo deletar eventos:\n    - Para o parâmetro \"event_id\", forneça o ID exato do evento obtido pela ferramenta Buscar_Reuniões\n    - Sempre confirme a exclusão comigo antes de prosseguir\n    - Após a exclusão, confirme que o evento foi removido com sucesso\n    - Se o ID do evento não for encontrado, informe isso e sugira buscar os eventos atuais novamente"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [1232, 16],
+      "id": "912c94d5-8031-408a-a28e-beab30ac0c37",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [1056, 224],
+      "id": "c8b98139-9419-4cf1-b0d1-0700eac99a20",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EHhJ7HI0qTkAK1Gs",
+          "name": "GeminiAutomacaoRespostaEmails"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.chat.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [1200, 224],
+      "id": "aefd48dd-788f-43d9-9fec-e0651512ca8c",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "gl930551@gmail.com",
+          "mode": "list",
+          "cachedResultName": "gl930551@gmail.com"
+        },
+        "timeMin": "={{ $fromAI(\"time_min\", \"Horário de início para buscar eventos\", \"string\") }}",
+        "timeMax": "={{ $fromAI(\"time_max\", \"Horário de término para buscar eventos\", \"string\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [1504, 240],
+      "id": "7382a5f2-46a2-4171-a470-50ef53a247c3",
+      "name": "Buscar_Eventos",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "3oVjgXipBLfwJIUQ",
+          "name": "AgenteAgendamentoConsultasPorVoz"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "gl930551@gmail.com",
+          "mode": "list",
+          "cachedResultName": "gl930551@gmail.com"
+        },
+        "start": "={{ $fromAI(\"start_time\", \"Horário de início do evento no formato datetime com fuso horário America/Sao_Paulo\", \"string\") }}",
+        "end": "={{ $fromAI(\"end_time\", \"Horário de término do evento no formato datetime com fuso horário America/Sao_Paulo\", \"string\") }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI(\"event_name\", \"Nome do evento\", \"string\") }}"
+        }
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [1376, 240],
+      "id": "6d258fec-9ab3-42ae-989c-3aa8c6f34123",
+      "name": "Criar_Eventos",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "3oVjgXipBLfwJIUQ",
+          "name": "AgenteAgendamentoConsultasPorVoz"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "delete",
+        "calendar": {
+          "__rl": true,
+          "value": "gl930551@gmail.com",
+          "mode": "list",
+          "cachedResultName": "gl930551@gmail.com"
+        },
+        "eventId": "={{ $fromAI(\"event_id\", \"ID do evento a ser excluído\", \"string\") }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [1632, 240],
+      "id": "210742b1-910c-485f-a374-1c986ca45b9b",
+      "name": "Deletar_Eventos",
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "3oVjgXipBLfwJIUQ",
+          "name": "AgenteAgendamentoConsultasPorVoz"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').item.json.message.chat.id }}",
+        "text": "={{ $json.output }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [1792, 16],
+      "id": "202a0c6a-6856-4365-9d20-e2f215970b54",
+      "name": "Send a text message",
+      "webhookId": "0951afdc-2191-4bbc-97e4-583d2971cd63",
+      "credentials": {
+        "telegramApi": {
+          "id": "FfmWPbS2nsCJTPKk",
+          "name": "AgenteAgendamentosConsultasPorVozBot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Get a file",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a file": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Buscar_Eventos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Criar_Eventos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Deletar_Eventos": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cf66ff5b-8cca-4e71-a384-ae3851e43a08",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "17e2de5509dbc571e3d32564923d8ea79b530b1323683bdbb8b883fa486835f5"
+  },
+  "id": "nG6FUUPoBPNMiFnS",
+  "tags": []
+}
