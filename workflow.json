@@ -149,9 +149,9 @@
         "operation": "getAll",
         "calendar": {
           "__rl": true,
-          "value": "gl930551@gmail.com",
+          "value": "seu-email-aqui@gmail.com",
           "mode": "list",
-          "cachedResultName": "gl930551@gmail.com"
+          "cachedResultName": "seu-email-aqui@gmail.com"
         },
         "timeMin": "={{ $fromAI(\"time_min\", \"Horário de início para buscar eventos\", \"string\") }}",
         "timeMax": "={{ $fromAI(\"time_max\", \"Horário de término para buscar eventos\", \"string\") }}",
@@ -173,9 +173,9 @@
       "parameters": {
         "calendar": {
           "__rl": true,
-          "value": "gl930551@gmail.com",
+          "value": "seu-email-aqui@gmail.com",
           "mode": "list",
-          "cachedResultName": "gl930551@gmail.com"
+          "cachedResultName": "seu-email-aqui@gmail.com"
         },
         "start": "={{ $fromAI(\"start_time\", \"Horário de início do evento no formato datetime com fuso horário America/Sao_Paulo\", \"string\") }}",
         "end": "={{ $fromAI(\"end_time\", \"Horário de término do evento no formato datetime com fuso horário America/Sao_Paulo\", \"string\") }}",
@@ -200,9 +200,9 @@
         "operation": "delete",
         "calendar": {
           "__rl": true,
-          "value": "gl930551@gmail.com",
+          "value": "seu-email-aqui@gmail.com",
           "mode": "list",
-          "cachedResultName": "gl930551@gmail.com"
+          "cachedResultName": "seu-email-aqui@gmail.com"
         },
         "eventId": "={{ $fromAI(\"event_id\", \"ID do evento a ser excluído\", \"string\") }}",
         "options": {}
